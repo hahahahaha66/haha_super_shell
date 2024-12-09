@@ -31,9 +31,16 @@ int main(){
     int count=0;
     char str[MAX_ORDER];
     char** result;
+    static struct option haha[]={
+        {"add",no_argument,0,'a'},
+        {0,0,0,0},
+    };
     while(1){
         fgets(str,MAX_ORDER,stdin);
-        while((opt=getopt_long()))
+        cutting_string(str,&result,&count);
+        optind=1;
+        while((getopt_long(count,result,"a:",haha,NULL)))
+        free_result(result,count);
     }
     return 0;
 }
