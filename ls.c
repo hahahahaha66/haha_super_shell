@@ -159,10 +159,12 @@ void list_directory(const char*path,int*option,int depth){
             }
             if(sta.st_mode&S_IXUSR){
                 if((haha[i].name)[0]=='.'){
-                    printf("\033[1;34m%-30s\033[0m%c",haha[i].name,a); 
+                    //printf("\033[1;34m%-30s\033[0m%c",haha[i].name,a); 
+                    printf("%-30s%c",haha[i].name,a);
                 }
                 else{
-                    printf("\033[1;32m%-30s\033[0m%c",haha[i].name,a);
+                    //printf("\033[1;32m%-30s\033[0m%c",haha[i].name,a);
+                    printf("%-30s%c",haha[i].name,a);
                 }
             }
             else{

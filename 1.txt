@@ -1,0 +1,5 @@
+ABCDEF 
+1.txt                         	shell                         	main2.c                       	
+cat                           	cat.c                         	echo.c                        	ls                            	
+ls.c                          	test.c                        	grep.c                        	grep                          	
+echo                          	README.md                     	my_program                    	main1.c                       	

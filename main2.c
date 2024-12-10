@@ -4,7 +4,9 @@
 #include<string.h>
 #include<getopt.h>
 #include<sys/wait.h>
+#include<fcntl.h>
 #define MAX_ORDER 100
+pid_t q;
 
 void cutting_string(char*str,char***result,int *count){
     int size=10;
@@ -43,12 +45,16 @@ void free_result(char**result,int count){
     free(result);
 }
 
+
+
 int main(){
     setenv("PATH", "/home/hahaha/work/haha_super_shell", 1);
     char**result=NULL;
     int count;
     char str[MAX_ORDER];
     while(1){
+        int saved_stdout = dup(STDOUT_FILENO);
+        int saved_stdin = dup(STDIN_FILENO);
         fgets(str,MAX_ORDER,stdin);
         cutting_string(str,&result,&count);
         int pipe_count=0;
@@ -73,6 +79,29 @@ int main(){
                 end++;
             }
             result[end]=NULL;
+            for(int k=start;k<end;k++){
+                if(!strcmp(result[k],"<")){
+                    int fd=open(result[k+1],O_RDWR|O_CREAT,0644);
+                    dup2(fd,STDIN_FILENO);
+                    result[k]=NULL;
+                    close(fd);
+                    break;
+                }
+                if(!strcmp(result[k],">")){
+                    int fd=open(result[k+1],O_RDWR | O_CREAT,0644);
+                    dup2(fd,STDOUT_FILENO);
+                    result[k]=NULL;
+                    close(fd);
+                    break;
+                }
+                if(!strcmp(result[k],">>")){
+                    int fd=open(result[k+1],O_WRONLY | O_CREAT | O_APPEND, 0644);
+                    dup2(fd,STDOUT_FILENO);
+                    result[k]=NULL;
+                    close(fd);
+                    break;
+                }
+            }
             pid_t pid=fork();
             if(pid<0){
                 perror("fork failed");
@@ -106,5 +135,10 @@ int main(){
             wait(NULL);
         }
         free_result(result,count);
+        dup2(saved_stdout, STDOUT_FILENO);
+        dup2(saved_stdin, STDIN_FILENO);
+        close(saved_stdout);
+        close(saved_stdin);
+
     }
 }
