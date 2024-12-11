@@ -46,8 +46,36 @@ void free_result(char**result,int count){
     free(result);
 }
 
+int cd(char*result[],int count){
+    char str[MAX_PATH]={0};
+    //printf("%d ",count);
+    if(count!=2){
+        printf("参数错误\n");
+        exit(1);
+    }
+    if(!strcmp(result[1],"-")){
+        char*old_path=getenv("OLDPWD");
+        if(chdir(old_path)!=0){
+            perror("chdir failed");
+            exit(1);
+        }
+    }
+    else{
+        if(chdir(result[1])!=0){
+            perror("chdir failed");
+            exit(1);
+        }
+    }
+    if(!getcwd(str,MAX_PATH)){
+        perror("getcwd failed");
+        exit(1);
+    }
+    printf("已切换到目录:%s\n",str);
+    return 0;
+}
+
 int main(){
-    setenv("PATH", "/home/hahaha/work/haha_super_shell", 1);
+    //setenv("PATH", "/home/hahaha/work/haha_super_shell", 1);
     char c[1024]={0};
     getcwd(c,MAX_PATH);
     setenv("PWD",c,1);
@@ -92,6 +120,19 @@ int main(){
             dup2(dp,STDOUT_FILENO);
             dup2(dp,STDERR_FILENO);
             close(dp);
+        }
+        if(!strcmp(result[0],"cd")){
+            cd(result,count);
+            char s1[MAX_PATH]={0};
+            char s2[MAX_PATH]={0};
+            char*old_pwd=getenv("PWD");
+            snprintf(s2, sizeof(s2), "%s", old_pwd);
+            setenv("OLDPWD",s2,1);
+            getcwd(s1,MAX_PATH);
+            setenv("PWD",s1,1);
+            printf("当前目录: %s\n", s1);
+            printf("上一目录: %s\n", s2);
+            continue;
         }
         int pipe_count=0;
         if(strcmp(result[0],"exit")==0){
@@ -175,13 +216,5 @@ int main(){
         dup2(saved_stdin, STDIN_FILENO);
         close(saved_stdout);
         close(saved_stdin);
-        char s1[MAX_PATH]={0};
-        char s2[MAX_PATH]={0};
-        char*old_pwd=getenv("PWD");
-        snprintf(s2, sizeof(s2), "%s", old_pwd);
-        getcwd(s1,MAX_PATH);
-        setenv("PWD",s1,1);
-        printf("Current directory: %s\n", s1);
-        printf("Previous directory: %s\n", s2);
     }
 }

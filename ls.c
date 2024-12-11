@@ -214,6 +214,7 @@ int main(int argc,char*argv[]){
     if(argc==1){
         getcwd(buf,sizeof(buf));
         list_directory(buf,option,0);
+        return 0;
     }
     while((opt=getopt(argc,argv,"alRtris"))!=-1){
         switch(opt){

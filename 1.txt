@@ -1,5 +1,17 @@
-ABCDEF 
-1.txt                         	shell                         	main2.c                       	
-cat                           	cat.c                         	echo.c                        	ls                            	
-ls.c                          	test.c                        	grep.c                        	grep                          	
-echo                          	README.md                     	my_program                    	main1.c                       	
+ABCDEF
+1.txt
+shell
+main2.c
+ls
+ls.c
+1
+test.c
+my_program
+cat
+cat.c
+echo.c
+grep.c
+grep
+echo
+README.md
+main1.c
