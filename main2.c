@@ -3,11 +3,14 @@
 #include<stdlib.h>
 #include<string.h>
 #include<getopt.h>
+#include<signal.h>
 #include<sys/wait.h>
 #include<fcntl.h>
+
 #define MAX_ORDER 100
 #define MAX_PATH 1024
-pid_t q;
+
+int ha=0;
 
 void cutting_string(char*str,char***result,int *count){
     int size=10;
@@ -74,27 +77,42 @@ int cd(char*result[],int count){
     return 0;
 }
 
+void haha(int sig){
+    ha=1;
+    printf("捕捉到编号为%d信号,已忽略\n",sig);
+}
+
 int main(){
     //setenv("PATH", "/home/hahaha/work/haha_super_shell", 1);
     char c[1024]={0};
     getcwd(c,MAX_PATH);
     setenv("PWD",c,1);
     setenv("OLDPWD",c,1);
+    struct sigaction signal;
+    signal.sa_handler=haha;
+    signal.sa_flags=0;
+    sigemptyset(&signal.sa_mask);
+    sigaction(2,&signal,NULL);
+    sigaction(3,&signal,NULL);
     char**result=NULL;
     int count;
     int a=0;
     char str[MAX_ORDER];
     while(1){
+        ha=0;
         if(a){
             sleep(100);
         }
         int saved_stdout = dup(STDOUT_FILENO);
         int saved_stdin = dup(STDIN_FILENO);
         fgets(str,MAX_ORDER,stdin);
+        if(ha){
+            continue;
+        }
         cutting_string(str,&result,&count);
         if(!strcmp(result[count-1],"&")){
             a=1;
-            q=fork();
+            pid_t q=fork();
             if(q<0){
                 perror("fork failed");
                 exit(1);
@@ -217,4 +235,5 @@ int main(){
         close(saved_stdout);
         close(saved_stdin);
     }
+    return 0;
 }
