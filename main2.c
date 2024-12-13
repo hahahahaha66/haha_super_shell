@@ -6,6 +6,9 @@
 #include<signal.h>
 #include<sys/wait.h>
 #include<fcntl.h>
+#include<sys/time.h>
+#include<time.h>
+#include<sys/ioctl.h>
 
 #define MAX_ORDER 100
 #define MAX_PATH 1024
@@ -81,7 +84,7 @@ int cd(char*result[],int count){
 
 void haha(int sig){
     ha=1;
-    printf("捕捉到编号为%d信号,已忽略\n",sig);
+    printf("捕捉到编号为%d的信号,已忽略\n",sig);
 }
 
 void over_time(int sig){
@@ -94,6 +97,8 @@ void over_time(int sig){
 
 int main(){
     //setenv("PATH", "/home/hahaha/work/haha_super_shell", 1);
+    time_t tim;
+    time(&tim);
     char c[1024]={0};
     getcwd(c,MAX_PATH);
     setenv("PWD",c,1);
@@ -102,20 +107,48 @@ int main(){
     signa.sa_handler=haha;
     signa.sa_flags=0;
     sigemptyset(&signa.sa_mask);
-    sigaction(2,&signa,NULL);
-    sigaction(3,&signa,NULL);
     signal(SIGALRM,over_time);
     char**result=NULL;
     int count;
     int a=0;
     char str[MAX_ORDER];
     while(1){
+        char*username=getenv("USER");
+        char*hostname=getenv("LOGNAME");
+        char*path=getenv("PWD");
+        if(!strcmp(path,"/home/hahaha")){
+            path="~";
+        }
+        int uid=geteuid();
+        struct winsize size;
+        if(isatty(STDIN_FILENO)!=0){
+            ioctl(STDIN_FILENO,TIOCGWINSZ,&size);
+        }
+        time_t haha;
+        struct tm* hahaha;
+        char buf[100];
+        time(&haha);
+        hahaha=localtime(&haha);
+        strftime(buf,100,"%H:%M:%S",hahaha);
+        for(int i=0;i<size.ws_col-10;i++){
+            printf(" ");
+        }
+        printf("\033[30;47m %s \033[0m\r",buf);
+        printf("[%s@%s %s]",username,hostname,path);
+        if(uid==0){
+            printf("# ");
+        }
+        else{
+            printf("$ ");
+        }
         ha=0;
         if(a){
             sleep(100);
         }
         int saved_stdout = dup(STDOUT_FILENO);
         int saved_stdin = dup(STDIN_FILENO);
+        sigaction(2,&signa,NULL);
+        sigaction(3,&signa,NULL);
         fgets(str,MAX_ORDER,stdin);
         if(ha){
             continue;
