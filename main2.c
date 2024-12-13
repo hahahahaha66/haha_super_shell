@@ -11,6 +11,8 @@
 #define MAX_PATH 1024
 
 int ha=0;
+int over=0;
+pid_t child_pid = -1;
 
 void cutting_string(char*str,char***result,int *count){
     int size=10;
@@ -82,18 +84,27 @@ void haha(int sig){
     printf("捕捉到编号为%d信号,已忽略\n",sig);
 }
 
+void over_time(int sig){
+    over=1;
+    if(child_pid!=-1){
+        kill(child_pid,SIGKILL);
+    }
+    printf("已超时,正在退出...\n");
+}
+
 int main(){
     //setenv("PATH", "/home/hahaha/work/haha_super_shell", 1);
     char c[1024]={0};
     getcwd(c,MAX_PATH);
     setenv("PWD",c,1);
     setenv("OLDPWD",c,1);
-    struct sigaction signal;
-    signal.sa_handler=haha;
-    signal.sa_flags=0;
-    sigemptyset(&signal.sa_mask);
-    sigaction(2,&signal,NULL);
-    sigaction(3,&signal,NULL);
+    struct sigaction signa;
+    signa.sa_handler=haha;
+    signa.sa_flags=0;
+    sigemptyset(&signa.sa_mask);
+    sigaction(2,&signa,NULL);
+    sigaction(3,&signa,NULL);
+    signal(SIGALRM,over_time);
     char**result=NULL;
     int count;
     int a=0;
@@ -169,6 +180,11 @@ int main(){
         }
         int start=0;
         for(int i=0;i<=pipe_count;i++){
+            int pipe_error[2];
+            if(pipe(pipe_error)==-1){
+                perror("pipe failed");
+                exit(1);
+            }
             int end=(i==pipe_count)?count:start;
             while(end<count&&strcmp(result[end],"|")!=0){
                 end++;
@@ -203,6 +219,9 @@ int main(){
                 exit(1);
             }
             else if(pid==0){
+                close(pipe_error[0]);
+                dup2(pipe_error[1],STDERR_FILENO);
+                close(pipe_error[1]);
                 if(i>0){
                     dup2(pipefd[i-1][0],STDIN_FILENO);
                 }
@@ -225,9 +244,31 @@ int main(){
                 close(pipefd[i][1]);
             }
             start=end+1;
-        }
-        for(int i=0;i<=pipe_count;i++){
-            wait(NULL);
+            child_pid=pid;
+            close(pipe_error[1]);
+            alarm(3);
+            int status;
+            waitpid(pid,&status,0);
+            alarm(0);
+            if(over){
+                return -1;
+            }
+            if(WIFEXITED(status)){
+                int exit_status=WEXITSTATUS(status);
+                if(exit_status!=0){
+                    char buffer[MAX_ORDER];
+                    int bytes;
+                    printf("错误:%d\n",exit_status);
+                    bytes=read(pipe_error[0], buffer, MAX_ORDER);
+                    if(bytes) {
+                        //printf("%d\n",bytes);
+                        buffer[bytes] = '\0';  // 确保字符串结束符
+                        printf("错误: %s", buffer);
+                    }           
+                    close(pipe_error[0]);
+                    return -1;
+                }
+            }
         }
         free_result(result,count);
         dup2(saved_stdout, STDOUT_FILENO);

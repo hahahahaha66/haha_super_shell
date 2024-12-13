@@ -10,15 +10,18 @@
 #include <errno.h>
 #include <signal.h>
 
-void haha(int sig){
-    printf("捕捉到编号为%d信号,已忽略\n",sig);
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <string.h>
 
-int main(){
-    struct sigaction signal;
-    signal.sa_handler=haha;
-    signal.sa_flags=0;
-    sigemptyset(&signal.sa_mask);
-    sigaction(1,&signal,NULL);
+#define READ_END 0
+#define WRITE_END 1
+
+
+int main() {
+    sleep(10);
     return 0;
 }
