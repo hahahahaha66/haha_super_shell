@@ -107,7 +107,6 @@ int main(){
     signa.sa_handler=haha;
     signa.sa_flags=0;
     sigemptyset(&signa.sa_mask);
-    signal(SIGALRM,over_time);
     char**result=NULL;
     int count;
     int a=0;
@@ -282,7 +281,7 @@ int main(){
             alarm(3);
             int status;
             waitpid(pid,&status,0);
-            alarm(0);
+            signal(SIGALRM,over_time);
             if(over){
                 return -1;
             }
@@ -302,6 +301,7 @@ int main(){
                     return -1;
                 }
             }
+            alarm(0);
         }
         free_result(result,count);
         dup2(saved_stdout, STDOUT_FILENO);
