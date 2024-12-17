@@ -34,15 +34,35 @@ void cutting_string(char*str,char***result,int *count){
             char**temp=realloc(*result,size*sizeof(char*));
             if(!temp){
                 perror("realloc failed");
+                for (int j = 0; j < i; j++) {
+                    free((*result)[j]);
+                }
                 free(*result);
                 exit(1);
             }
             *result=temp;
         }
-        (*result)[i++]=strdup(token);
+        (*result)[i]=strdup(token);
+        if((*result)[i]==NULL) {  // 检查 strdup 是否失败
+            perror("strdup failed");
+            for (int j = 0; j < i; j++) {
+                free((*result)[j]);
+            }
+            free(*result);
+            exit(1);
+        }
+        i++;
         token=strtok(NULL," ");
     }
     *result=realloc(*result,(i+1)*sizeof(char*));
+    if (*result == NULL && i > 0) {  // 如果调整失败且有分配内存，需清理
+        perror("final realloc failed");
+        for (int j = 0; j < i; j++) {
+            free((*result)[j]);
+        }
+        free(*result);
+        exit(1);
+    }
     (*result)[i]=NULL;
     *count=i;
 }
@@ -57,21 +77,30 @@ void free_result(char**result,int count){
 int cd(char*result[],int count){
     char str[MAX_PATH]={0};
     //printf("%d ",count);
-    if(count!=2){
-        printf("参数错误\n");
-        exit(1);
-    }
-    if(!strcmp(result[1],"-")){
-        char*old_path=getenv("OLDPWD");
-        if(chdir(old_path)!=0){
+    if(count==1){
+        char*home=getenv("HOME");
+        if(chdir(home)!=0){
             perror("chdir failed");
             exit(1);
         }
     }
-    else{
-        if(chdir(result[1])!=0){
-            perror("chdir failed");
-            exit(1);
+    if(count>2){
+        printf("参数错误\n");
+        exit(1);
+    }
+    if(count==2){
+        if(!strcmp(result[1],"-")){
+            char*old_path=getenv("OLDPWD");
+            if(chdir(old_path)!=0){
+                perror("chdir failed");
+                exit(1);
+            }
+        }
+        else{
+            if(chdir(result[1])!=0){
+                perror("chdir failed");
+                exit(1);
+            }
         }
     }
     if(!getcwd(str,MAX_PATH)){
@@ -158,21 +187,26 @@ int main(){
             pid_t q=fork();
             if(q<0){
                 perror("fork failed");
+                free_result(result,count);
                 exit(1);
             }
             if(q>0){
+                free_result(result,count);
                 exit(0);
             }
             if (setsid() < 0) {
                 perror("setsid failed");
+                free_result(result,count);
                 exit(1);
             }
             q=fork();
             if (q<0) {
                 perror("fork failed");
+                free_result(result,count);
                 exit(1);
             }
             if (q>0) {
+                free_result(result,count);
                 exit(0);
             }
             printf("pid:%d\n",getpid());
@@ -193,11 +227,13 @@ int main(){
             setenv("PWD",s1,1);
             printf("当前目录: %s\n", s1);
             printf("上一目录: %s\n", s2);
+            free_result(result,count);
             continue;
         }
         int pipe_count=0;
         if(strcmp(result[0],"exit")==0){
-            break;
+            free_result(result,count);
+            return 0;
         }
         for(int i=0;i<count;i++){
             if(strcmp(result[i],"|")==0)
@@ -207,6 +243,7 @@ int main(){
         for(int i=0;i<pipe_count;i++){
             if(pipe(pipefd[i])==-1){
                 perror("pipe failed");
+                free_result(result,count);
                 exit(1);
             }
         }
@@ -215,6 +252,7 @@ int main(){
             int pipe_error[2];
             if(pipe(pipe_error)==-1){
                 perror("pipe failed");
+                free_result(result,count);
                 exit(1);
             }
             int end=(i==pipe_count)?count:start;
@@ -248,6 +286,7 @@ int main(){
             pid_t pid=fork();
             if(pid<0){
                 perror("fork failed");
+                free_result(result,count);
                 exit(1);
             }
             else if(pid==0){
@@ -266,6 +305,7 @@ int main(){
                 }
                 if(execvp(result[start],&result[start])==-1){
                     perror("execvp failed");
+                    free_result(result,count);
                     exit(1);
                 }
             }
@@ -283,6 +323,7 @@ int main(){
             waitpid(pid,&status,0);
             signal(SIGALRM,over_time);
             if(over){
+                free_result(result,count);
                 return -1;
             }
             if(WIFEXITED(status)){
@@ -298,6 +339,7 @@ int main(){
                         printf("错误: %s", buffer);
                     }           
                     close(pipe_error[0]);
+                    free_result(result,count);
                     return -1;
                 }
             }
