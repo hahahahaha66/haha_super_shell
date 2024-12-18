@@ -9,12 +9,17 @@
 #include<sys/time.h>
 #include<time.h>
 #include<sys/ioctl.h>
+#include<dirent.h>
+#include<termios.h>
+#include<readline/readline.h>
+#include<readline/history.h>
 
 #define MAX_ORDER 100
 #define MAX_PATH 1024
 
 int ha=0;
 int over=0;
+char** commands;
 pid_t child_pid = -1;
 
 void cutting_string(char*str,char***result,int *count){
@@ -43,7 +48,7 @@ void cutting_string(char*str,char***result,int *count){
             *result=temp;
         }
         (*result)[i]=strdup(token);
-        if((*result)[i]==NULL) {  // 检查 strdup 是否失败
+        if((*result)[i]==NULL) { 
             perror("strdup failed");
             for (int j = 0; j < i; j++) {
                 free((*result)[j]);
@@ -55,7 +60,7 @@ void cutting_string(char*str,char***result,int *count){
         token=strtok(NULL," ");
     }
     *result=realloc(*result,(i+1)*sizeof(char*));
-    if (*result == NULL && i > 0) {  // 如果调整失败且有分配内存，需清理
+    if (*result == NULL && i > 0) {  
         perror("final realloc failed");
         for (int j = 0; j < i; j++) {
             free((*result)[j]);
@@ -72,6 +77,49 @@ void free_result(char**result,int count){
         free(result[i]);
     }
     free(result);
+}
+
+int get_commands(char*path,char*commands[]){
+    int count=0;
+    DIR*dir=opendir(path);
+    struct dirent* dirent;
+    while((dirent=readdir(dir))!=NULL){
+        if(!strcmp(dirent->d_name,".")||(!strcmp(dirent->d_name,".."))){
+            continue;
+        }
+        commands[count]=strdup(dirent->d_name);
+        if (commands[count] == NULL) {
+            perror("strdup failed");
+            closedir(dir);
+            return 0;
+        }
+        count++;
+    }
+    commands[count]=NULL;
+    closedir(dir);
+    return count;
+}
+
+char* command_generator(const char*text,int state){
+    static int index,len;
+    char*cmd;
+    if(!state){
+        index=0;
+        len=strlen(text);
+    }
+    while((cmd=commands[index++])){
+        if(strncmp(cmd,text,len)==0){
+            return strdup(cmd);
+        }
+    }
+    return NULL;
+}
+
+char**command_completion(const char*text,int start,int len){
+    if(start!=0){
+        return NULL;
+    }
+    return rl_completion_matches(text, command_generator);
 }
 
 int cd(char*result[],int count){
@@ -126,6 +174,15 @@ void over_time(int sig){
 
 int main(){
     //setenv("PATH", "/home/hahaha/work/haha_super_shell", 1);
+    commands=(char**)malloc(sizeof(char*)*10000);
+    int num_commands=get_commands("/usr/bin",commands);
+    if(num_commands==0){
+        return 1;
+    }
+    for(int i=0;i<num_commands;i++){
+        printf("%s ",commands[i]);
+    }
+    rl_attempted_completion_function = command_completion;
     time_t tim;
     time(&tim);
     char c[1024]={0};
@@ -139,7 +196,7 @@ int main(){
     char**result=NULL;
     int count;
     int a=0;
-    char str[MAX_ORDER];
+    char *str;
     while(1){
         char*username=getenv("USER");
         char*hostname=getenv("LOGNAME");
@@ -161,15 +218,17 @@ int main(){
         for(int i=0;i<size.ws_col-10;i++){
             printf(" ");
         }
-        printf("\033[30;47m %s \033[0m\r",buf);
-        printf("[%s@%s %s]",username,hostname,path);
+        char fu;
         if(uid==0){
-            printf("# ");
+            fu='#';
         }
         else{
-            printf("$ ");
+            fu='$';
         }
-        ha=0;
+        printf("\033[30;47m %s \033[0m\r",buf);
+        char*begin=(char*)malloc(100);
+        sprintf(begin,"[%s@%s %s]%c ",username,hostname,path,fu);
+        //printf("%s",begin);
         if(a){
             sleep(100);
         }
@@ -177,11 +236,35 @@ int main(){
         int saved_stdin = dup(STDIN_FILENO);
         sigaction(2,&signa,NULL);
         sigaction(3,&signa,NULL);
-        fgets(str,MAX_ORDER,stdin);
+        str=readline(begin);
+        if(str==NULL){
+            perror("reandline failed");
+            return 1;
+        }
+        if (*str) {
+            add_history(str);
+        }
+        //fgets(str,MAX_ORDER,stdin);
         if(ha){
+            ha=0;
             continue;
         }
         cutting_string(str,&result,&count);
+        free(str);
+        free(begin);
+        str=NULL;
+        begin=NULL;
+
+        if(strcmp(result[0],"exit")==0){
+            free(str);
+            free(begin);
+            str=NULL;
+            begin=NULL;
+            clear_history();
+            free_result(result,count);
+            return 0;
+        }
+
         if(!strcmp(result[count-1],"&")){
             a=1;
             pid_t q=fork();
@@ -216,6 +299,7 @@ int main(){
             dup2(dp,STDERR_FILENO);
             close(dp);
         }
+
         if(!strcmp(result[0],"cd")){
             cd(result,count);
             char s1[MAX_PATH]={0};
@@ -230,11 +314,8 @@ int main(){
             free_result(result,count);
             continue;
         }
+
         int pipe_count=0;
-        if(strcmp(result[0],"exit")==0){
-            free_result(result,count);
-            return 0;
-        }
         for(int i=0;i<count;i++){
             if(strcmp(result[i],"|")==0)
             pipe_count++;
@@ -248,6 +329,7 @@ int main(){
             }
         }
         int start=0;
+
         for(int i=0;i<=pipe_count;i++){
             int pipe_error[2];
             if(pipe(pipe_error)==-1){
@@ -260,6 +342,7 @@ int main(){
                 end++;
             }
             result[end]=NULL;
+
             for(int k=start;k<end;k++){
                 if(!strcmp(result[k],"<")){
                     int fd=open(result[k+1],O_RDWR|O_CREAT,0644);
@@ -283,6 +366,7 @@ int main(){
                     break;
                 }
             }
+
             pid_t pid=fork();
             if(pid<0){
                 perror("fork failed");
@@ -306,7 +390,7 @@ int main(){
                 if(execvp(result[start],&result[start])==-1){
                     perror("execvp failed");
                     free_result(result,count);
-                    exit(1);
+                    exit(127);
                 }
             }
             if(i>0){
@@ -316,6 +400,7 @@ int main(){
                 close(pipefd[i][1]);
             }
             start=end+1;
+
             child_pid=pid;
             close(pipe_error[1]);
             alarm(3);
@@ -328,19 +413,17 @@ int main(){
             }
             if(WIFEXITED(status)){
                 int exit_status=WEXITSTATUS(status);
-                if(exit_status!=0){
-                    char buffer[MAX_ORDER];
-                    int bytes;
-                    printf("错误:%d\n",exit_status);
-                    bytes=read(pipe_error[0], buffer, MAX_ORDER);
-                    if(bytes) {
-                        //printf("%d\n",bytes);
-                        buffer[bytes] = '\0';  // 确保字符串结束符
-                        printf("错误: %s", buffer);
-                    }           
-                    close(pipe_error[0]);
-                    free_result(result,count);
-                    return -1;
+                if(exit_status==127){
+                    fprintf(stderr, "Command not found: %s\n", result[start]);
+                    free_result(result, count);
+                    exit(exit_status);
+                }
+                else if(exit_status==1&&strcmp(result[start],"grep")){
+                    continue;
+                }
+                else if(exit_status!=0){
+                    fprintf(stderr,"命令失败:%d\n",exit_status);
+                    exit(exit_status);
                 }
             }
             alarm(0);

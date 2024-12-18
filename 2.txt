@@ -1,1 +1,15 @@
-已超时,正在退出...
+0
+（标准输入）
+ls.c
+ls
+haha
+常见信号.md
+test.c
+my_program
+main2.c
+main1.c
+README.md
+shell
+abc.txt
+1.txt
+ABCDEF

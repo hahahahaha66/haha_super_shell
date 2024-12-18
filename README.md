@@ -1,3 +1,4 @@
+gcc -g -o shell main2.c -lreadline -fsanitize=address  
 以下是 exec 系列函数的具体介绍和用法：
 
 1. execl
