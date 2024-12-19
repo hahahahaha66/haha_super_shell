@@ -211,9 +211,8 @@ int main(){
         }
         time_t haha;
         struct tm* hahaha;
-        char buf[100];
-        char tim[100];
-        char temp[100];
+        char buf[1024];
+        char tim[1024];
         time(&haha);
         hahaha=localtime(&haha);
         strftime(buf,100,"%H:%M:%S",hahaha);
@@ -241,6 +240,8 @@ int main(){
         sigaction(2,&signa,NULL);
         sigaction(3,&signa,NULL);
         str=readline(begin);
+        free(begin);
+        begin=NULL;
         if(str==NULL){
             perror("reandline failed");
             return 1;
@@ -255,9 +256,7 @@ int main(){
         }
         cutting_string(str,&result,&count);
         free(str);
-        free(begin);
         str=NULL;
-        begin=NULL;
 
         if(strcmp(result[0],"exit")==0){
             free(str);
