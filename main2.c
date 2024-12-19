@@ -161,7 +161,7 @@ int cd(char*result[],int count){
 
 void haha(int sig){
     ha=1;
-    printf("捕捉到编号为%d的信号,已忽略\n",sig);
+    printf("捕捉到编号为%d的信号,已忽略,按回车恢复\n",sig);
 }
 
 void over_time(int sig){
@@ -212,12 +212,16 @@ int main(){
         time_t haha;
         struct tm* hahaha;
         char buf[100];
+        char tim[100];
+        char temp[100];
         time(&haha);
         hahaha=localtime(&haha);
         strftime(buf,100,"%H:%M:%S",hahaha);
-        for(int i=0;i<size.ws_col-10;i++){
-            printf(" ");
+        int j;
+        for(j=0;j<size.ws_col-10;j++){
+            tim[j]=' ';
         }
+        tim[j]='\0';
         char fu;
         if(uid==0){
             fu='#';
@@ -225,10 +229,10 @@ int main(){
         else{
             fu='$';
         }
-        printf("\033[30;47m %s \033[0m\r",buf);
-        char*begin=(char*)malloc(100);
-        sprintf(begin,"[%s@%s %s]%c ",username,hostname,path,fu);
-        //printf("%s",begin);
+        sprintf(tim,"%s\033[30;47m %s \033[0m\r",tim,buf);
+        //printf("%s\n",tim);
+        char*begin=(char*)malloc(1024);
+        sprintf(begin,"%s[%s@%s %s]%c ",tim,username,hostname,path,fu);
         if(a){
             sleep(100);
         }
