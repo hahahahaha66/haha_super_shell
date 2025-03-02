@@ -164,13 +164,13 @@ void haha(int sig){
     printf("捕捉到编号为%d的信号,已忽略,按回车恢复\n",sig);
 }
 
-void over_time(int sig){
-    over=1;
-    if(child_pid!=-1){
-        kill(child_pid,SIGKILL);
-    }
-    printf("已超时,正在退出...\n");
-}
+// void over_time(int sig){
+//     over=1;
+//     if(child_pid!=-1){
+//         kill(child_pid,SIGKILL);
+//     }
+//     printf("已超时,正在退出...\n");
+// }
 
 int main(){
     //setenv("PATH", "/home/hahaha/work/haha_super_shell", 1);
@@ -406,10 +406,10 @@ int main(){
 
             child_pid=pid;
             close(pipe_error[1]);
-            alarm(3);
+            //alarm(3);
             int status;
             waitpid(pid,&status,0);
-            signal(SIGALRM,over_time);
+            //signal(SIGALRM,over_time);
             if(over){
                 free_result(result,count);
                 return -1;
