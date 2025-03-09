@@ -417,9 +417,9 @@ int main(){
             if(WIFEXITED(status)){
                 int exit_status=WEXITSTATUS(status);
                 if(exit_status==127){
-                    fprintf(stderr, "Command not found: %s\n", result[start]);
-                    free_result(result, count);
-                    exit(exit_status);
+                    // fprintf(stderr, "Command not found: %s\n", result[start]);
+                    // free_result(result, count);
+                    // exit(EXIT_FAILURE);
                 }
                 else if(exit_status==1&&strcmp(result[start],"grep")){
                     continue;
