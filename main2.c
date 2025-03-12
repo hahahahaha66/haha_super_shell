@@ -75,8 +75,10 @@ void cutting_string(char*str,char***result,int *count){
 void free_result(char**result,int count){
     for(int i=0;i<count;i++){
         free(result[i]);
+        result[i]=NULL;
     }
     free(result);
+    result=NULL;
 }
 
 int get_commands(char*path,char*commands[]){
@@ -240,24 +242,30 @@ int main(){
         sigaction(2,&signa,NULL);
         sigaction(3,&signa,NULL);
         str=readline(begin);
+        
         free(begin);
         begin=NULL;
         if(str==NULL){
-            perror("reandline failed");
+            perror("readline failed");
             return 1;
         }
         if (*str) {
             add_history(str);
         }
         //fgets(str,MAX_ORDER,stdin);
+        
         if(ha){
             ha=0;
             continue;
         }
         cutting_string(str,&result,&count);
+        if(count==0){
+            continue;
+        }
+        
         free(str);
         str=NULL;
-
+        
         if(strcmp(result[0],"exit")==0){
             free(str);
             free(begin);
@@ -268,7 +276,7 @@ int main(){
             return 0;
         }
 
-        if(!strcmp(result[count-1],"&")){
+        if(count>=2&&!strcmp(result[count-1],"&")){
             a=1;
             pid_t q=fork();
             if(q<0){
@@ -303,7 +311,7 @@ int main(){
             close(dp);
         }
 
-        if(!strcmp(result[0],"cd")){
+        if(count>=2&&!strcmp(result[0],"cd")){
             cd(result,count);
             char s1[MAX_PATH]={0};
             char s2[MAX_PATH]={0};
@@ -414,21 +422,23 @@ int main(){
                 free_result(result,count);
                 return -1;
             }
-            if(WIFEXITED(status)){
-                int exit_status=WEXITSTATUS(status);
-                if(exit_status==127){
-                    // fprintf(stderr, "Command not found: %s\n", result[start]);
-                    // free_result(result, count);
-                    // exit(EXIT_FAILURE);
-                }
-                else if(exit_status==1&&strcmp(result[start],"grep")){
-                    continue;
-                }
-                else if(exit_status!=0){
-                    fprintf(stderr,"命令失败:%d\n",exit_status);
-                    exit(exit_status);
-                }
-            }
+            // if(WIFEXITED(status)){
+            //     int exit_status=WEXITSTATUS(status);
+            //     if(exit_status==127){
+            //         printf("Commend Not Found\n");
+            //         continue;
+            //         free_result(result, count);
+            //         exit(EXIT_FAILURE);
+            //     }
+            //     else if(exit_status==1&&strcmp(result[start],"grep")){
+            //         continue;
+            //     }
+            //     else if(exit_status!=0){
+            //         printf("Commend Failed\n");
+            //         continue;
+            //         exit(exit_status);
+            //     }
+            // }ls
             alarm(0);
         }
         free_result(result,count);
